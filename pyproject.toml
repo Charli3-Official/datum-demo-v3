@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "network-feed-demo"
+version = "0.1.0"
+description = ""
+authors = ["xxAVOGADROxx <jose.seraquive@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pycardano = "^0.9.0"
+pylint = "^3.0.1"
+black = "^23.9.1"
+mypy = "^1.6.0"
+flake8 = "^6.1.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[[tool.mypy.overrides]]
+module = "pycardano.*"
+ignore_missing_imports = true

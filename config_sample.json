@@ -1,0 +1,6 @@
+{
+    "BLOCKFROST_PROJECT_ID": "your_project_id_here",
+    "BLOCKFROST_BASE_URL": "your_base_url_here",
+    "C3_CONTRACT_ADDRESS":  "contract_address"
+    "MINTING_POLICY": "minting_policy"
+}
