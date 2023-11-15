@@ -45,7 +45,7 @@ def create_parser():
     """Initialize and return the command-line parser."""
     parser = argparse.ArgumentParser(
         prog="python network-feed-demo/main.py",
-        description="Charli3 Network feed reader (PREPRODUCTION)",
+        description="Charli3 Network feed reader",
         epilog="Copyright: (c) 2020 - 2023 Charli3",
     )
     add_subparsers(parser)
@@ -57,9 +57,9 @@ def add_subparsers(parser):
     subparsers = parser.add_subparsers(dest="command")
 
     c3_network_parser = subparsers.add_parser(
-        "c3-network",
-        help="C3 Network Reader",
-        description="Available C3 network interactions",
+        "preprod",
+        help="Testing environment",
+        description="Available C3 Network Interactions",
     )
 
     action_group = c3_network_parser.add_mutually_exclusive_group(required=True)
@@ -99,9 +99,9 @@ def display_feed_info():
     expiration_time = format_timestamp(read.get_network_expiration())
 
     print(f"Contract address: {read.network_address}")
-    print(f"C3 Network feed [USD/ADA]: {exchange_rate_decimal}")
     print(f"Creation time: {generation_time}")
     print(f"Expiration time: {expiration_time}")
+    print(f"C3 Network feed: {exchange_rate_decimal}")
 
 
 def display_network_configuration():
@@ -109,7 +109,7 @@ def display_network_configuration():
     network_oracle_settings = read.get_network_configuration()
 
     print(f"Contract address: {read.network_address}")
-    print("########## C3 Network configuration [USD/ADA] ##########")
+    print("########## C3 Network configuration ##########")
     print(
         "1. List of autorized nodes in Network: "
         f"{len(network_oracle_settings.os_node_list)} nodes."
@@ -151,12 +151,10 @@ def display_network_configuration():
     )
 
     print(
-        "9. Threshold setting 1 for Consensus (IQR): "
-        f"{network_oracle_settings.os_iqr_multiplier}."
+        "9. Consensus Setting (IQR): " f"{network_oracle_settings.os_iqr_multiplier}."
     )
     print(
-        "10. Threshold setting 2 for Consensus (DIV): "
-        f"{network_oracle_settings.os_divergence/100}%."
+        "10. Consensus Setting (DP): " f"{network_oracle_settings.os_divergence/100}%."
     )
 
     signatories, minimum_signatories = read.get_platform_signatories_info(
@@ -171,7 +169,7 @@ def display_network_configuration():
 
 def process_arguments(args):
     """Process and act based on the given command-line arguments."""
-    if args.command == "c3-network":
+    if args.command == "preprod":
         if args.configuration:
             display_network_configuration()
         elif args.feed:
@@ -182,7 +180,7 @@ def main():
     """main execution program"""
 
     parser = create_parser()
-    args = parser.parse_args()
+    args = parser.parse_args(None if sys.argv[1:] else ["-h"])
     process_arguments(args)
 
 

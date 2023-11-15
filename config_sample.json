@@ -1,6 +1,6 @@
 {
     "BLOCKFROST_PROJECT_ID": "your_project_id_here",
     "BLOCKFROST_BASE_URL": "your_base_url_here",
-    "C3_CONTRACT_ADDRESS":  "contract_address"
-    "MINTING_POLICY": "minting_policy"
+    "C3_CONTRACT_ADDRESS":  "addr_test1wr64gtafm8rpkndue4ck2nx95u4flhwf643l2qmg9emjajg2ww0nj"
+    "MINTING_POLICY": "5e4a2431a465a00dc5d8181aaff63959bb235d97013e7acb50b55bc4"
 }
