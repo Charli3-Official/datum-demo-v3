@@ -8,7 +8,7 @@ tmp/
 build
 htmlcov
 
-config.json
+config.yaml
 .mypy.chache
 
 # Byte-compiled / optimized / DLL files

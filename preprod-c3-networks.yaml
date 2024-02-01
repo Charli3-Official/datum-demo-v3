@@ -1,0 +1,12 @@
+ADA-CHARLI3:
+  address: addr_test1wr64gtafm8rpkndue4ck2nx95u4flhwf643l2qmg9emjajg2ww0nj
+  minting-policy: 5e4a2431a465a00dc5d8181aaff63959bb235d97013e7acb50b55bc4
+ADA-USD:
+  address: addr_test1wzn5ee2qaqvly3hx7e0nk3vhm240n5muq3plhjcnvx9ppjgf62u6a
+  minting-policy: 1116903479e7320b8e4592207aaebf627898267fcd80e2d9646cbf07
+SHEN-USD:
+  address: addr_test1wqlcn3pks3xdptxjw9pqrqtcx6ev694sstsruw3phd57ttg0lh0zq
+  minting-policy: 2b556df9f37c04ef31b8f7f581c4e48174adcf5041e8e52497d81556
+USDM-USD:
+  address: addr_test1wr0q3fr83cr0zv4gfdvzcquqzy242hgmvt7ey2d938rtwugyc76x9
+  minting-policy: 424f268a65632944ddfe17967208178082058cbe9044f53aee28697d
