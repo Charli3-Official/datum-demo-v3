@@ -10,3 +10,6 @@ SHEN-USD:
 USDM-USD:
   address: addr_test1wr0q3fr83cr0zv4gfdvzcquqzy242hgmvt7ey2d938rtwugyc76x9
   minting-policy: 424f268a65632944ddfe17967208178082058cbe9044f53aee28697d
+NEWM-ADA:
+  address: addr_test1wpqaef0s4clrzgt4jz44r4hagq6yqn5wjv58a468m5pw59s2flaza
+  minting-policy: caae32217405019b0e69a79cf997bf56a663bccae43e414cd741c013

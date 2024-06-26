@@ -54,6 +54,7 @@ class GenericData(PlutusData):
 class OraclePlatform(PlutusData):
     """Oracle Platform parameters"""
 
+    CONSTR_ID = 0
     pmultisig_pkhs: IndefiniteList  # Allowed pkhs for platform authorization
     pmultisig_threshold: int  # required number of signatories for authorization
 

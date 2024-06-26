@@ -1,7 +1,7 @@
 """Read C3 Network configuration"""
 
-from pycardano import Address,  MultiAsset, BlockFrostChainContext
-from .datums import GenericData, AggDatum, OracleSettings, OraclePlatform
+from pycardano import Address, MultiAsset, BlockFrostChainContext
+from datums import GenericData, AggDatum, OracleSettings, OraclePlatform
 from datetime import datetime
 
 
@@ -42,51 +42,58 @@ class Charli3NetworkInfoReader:
         """Convert epoch to humnan"""
         return datetime.utcfromtimestamp(timestamp / 1000).strftime("%Y-%m-%d %H:%M:%S")
 
-
     def display_oracle_feed(self):
         """Get the oracle's feed exchange rate"""
         try:
             oracle_utxos = self.context.utxos(str(self.network_address))
-            print(oracle_utxos)
 
-            oracle_feed_utxo = None
-            for utxo in oracle_utxos:
-                if utxo.output.amount.multi_asset == self.network_feed_nft:
-                    oracle_feed_utxo = utxo
-                    break
-            else:
-                raise ValueError("No Oracle Feed UTXO found matching the network feed NFT.")
-
-            print(oracle_feed_utxo)
-            oracle_inline_datum: GenericData = GenericData.from_cbor(
-                oracle_feed_utxo.output.datum.cbor
+            oracle_feed_utxo = next(
+                (
+                    utxo
+                    for utxo in oracle_utxos
+                    if utxo.output.amount.multi_asset == self.network_feed_nft
+                ),
+                None,
             )
 
-            print(oracle_inline_datum)
-            price = int(oracle_inline_datum.price_data.get_price() / 1000000)
-            creation_time = self.format_timestamp(
-                oracle_inline_datum.price_data.get_timestamp()
-            )
-            expiration_time = self.format_timestamp(
-                oracle_inline_datum.price_data.get_expiry()
-            )
+            if not oracle_feed_utxo:
+                raise ValueError(
+                    "No Oracle Feed UTXO found matching the network feed NFT."
+                )
 
-            feed_info = f"""Last Price: {price}
-    Creation time: {creation_time}
-    Expiration time: {expiration_time}"""
+            if oracle_feed_utxo.output.datum and not isinstance(
+                oracle_feed_utxo.output.datum, AggDatum
+            ):
+                if oracle_feed_utxo.output.datum.cbor:
+                    oracle_inline_datum = GenericData.from_cbor(
+                        oracle_feed_utxo.output.datum.cbor
+                    )
 
-            print(feed_info)
+                    price = float(oracle_inline_datum.price_data.get_price()) / 1000000
+                    creation_time = self.format_timestamp(
+                        oracle_inline_datum.price_data.get_timestamp()
+                    )
+                    expiration_time = self.format_timestamp(
+                        oracle_inline_datum.price_data.get_expiry()
+                    )
+
+                    feed_info = f"""
+    CHARLI3 - Oracle Feed
+    Last Price: {price}
+    Creation Time: {creation_time}
+    Expiration Time: {expiration_time}"""
+                    print(feed_info)
+
+        except Exception as e:
+            print(f"Error retrieving oracle feed: {e}")
 
         except ValueError as e:
             print(f"Error retrieving oracle feed: {e}")
-        # except Exception as e:
-        #     print(f"An unexpected error occurred: {e}")
 
     def get_network_configuration(self):
         """Fetch the Aggregate UTxO Configuration Using the NFT Identifier"""
         try:
             oracle_utxos = self.context.utxos(str(self.network_address))
-            print(oracle_utxos)
 
             for utxo in oracle_utxos:
                 if utxo.output.amount.multi_asset >= self.aggregate_state_nft:
