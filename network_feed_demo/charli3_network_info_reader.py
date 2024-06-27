@@ -1,7 +1,7 @@
 """Read C3 Network configuration"""
 
 from pycardano import Address, MultiAsset, BlockFrostChainContext
-from datums import GenericData, AggDatum, OracleSettings, OraclePlatform
+from .datums import GenericData, AggDatum, OracleSettings, OraclePlatform
 from datetime import datetime
 
 

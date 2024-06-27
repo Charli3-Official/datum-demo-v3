@@ -1,6 +1,5 @@
 blockfrost:
-  project_id:
-  base_url:
-demeter:
-  kupo:
-  ogmios:
+  project_id: token
+ogmios:
+  ws_url: ws://x.x.x.x:1337
+  kupo_url: http://x.x.x.x:1442

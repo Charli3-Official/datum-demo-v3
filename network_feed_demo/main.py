@@ -2,10 +2,11 @@
 
 import argparse
 import yaml
+import ogmios
 import sys
 
-from pycardano import BlockFrostChainContext, OgmiosChainContext, Address
-from charli3_network_info_reader import Charli3NetworkInfoReader
+from pycardano import BlockFrostChainContext, OgmiosChainContext, Address, Network
+from .charli3_network_info_reader import Charli3NetworkInfoReader
 
 
 def create_parser():
@@ -57,35 +58,43 @@ def load_config():
         sys.exit(1)
 
 
-# def validate_config(config, service, required_keys):
-#     """Validates that all required keys exist for a service configuration."""
-#     if service not in config or not all(
-#         key in config[service] for key in required_keys
-#     ):
-#         raise ValueError(f"Context for {service} not found or is incomplete.")
+def validate_config(config, service, required_keys):
+    """Validates that all required keys exist for a service configuration."""
+    if service not in config or not all(
+        key in config[service] for key in required_keys
+    ):
+        raise ValueError(f"Context for {service} not found or is incomplete.")
 
 
 def context(args):
     """Connection context"""
     configyaml = load_config()
 
+    network = None
+    if args.environment == "tesnet":
+        network = Network.TESTNET
+    else:
+        network = Network.MAINNET
+
     if args.service == "blockfrost":
-        # required_keys = ["project_id", "base_url"]
-        # validate_config(configyaml, args.service, required_keys)
+        required_keys = ["project_id"]
+        validate_config(configyaml, args.service, required_keys)
 
         return BlockFrostChainContext(
             project_id=configyaml[args.service].get("project_id", ""),
-            base_url=configyaml[args.service].get("base_url", ""),
+            network=network,
+            base_url=None,
         )
     elif args.service == "ogmios":
-        # required_keys = ["kupo", "ogmios"]
-        # validate_config(configyaml, args.service, required_keys)
+        required_keys = ["kupo_url", "ws_url"]
+        validate_config(configyaml, args.service, required_keys)
 
-        return OgmiosChainContext(
-            configyaml[args.service].get("ws_url", ""),
-            args.environment,
-            configyaml[args.service].get("kupo", ""),
-        )
+        ogmios_ws_url = configyaml["ogmios"]["ws_url"]
+        kupo_url = configyaml["ogmios"]["kupo_url"]
+
+        _, ws_string = ogmios_ws_url.split("ws://")
+        ws_url, port = ws_string.split(":")
+        return ogmios.OgmiosChainContext(host=ws_url, port=int(port), network=network)
     else:
         raise ValueError(f"Service {args.service} is not supported.")
 

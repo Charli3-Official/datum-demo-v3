@@ -7,7 +7,8 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-pycardano = "^0.10.0"
+pycardano = "^0.11.1"
+ogmios = "^1.0.6"
 pylint = "^3.0.1"
 black = "^23.9.1"
 mypy = "^1.6.0"
