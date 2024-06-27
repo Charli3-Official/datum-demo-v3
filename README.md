@@ -41,11 +41,11 @@ options:
   --service {blockfrost,ogmios}
                         External service to read blockhain information
 
-Copyright: (c) 2020 - 2024 Charli3```
+Copyright: (c) 2020 - 2024 Charli3
+```
 
 For your convenience, the configuration file includes lives oracle networks under `mainnet-c3-networkds.yaml` and `preprod-c3-networks`
 
-```
 For example:
 ```
 poetry run charli3 --action feed --service blockfrost ADA-CHARLI3 mainnet
