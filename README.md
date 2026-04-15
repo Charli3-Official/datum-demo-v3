@@ -20,8 +20,14 @@ Install dependencies using Poetry:
 ```
 poetry install
 ```
+
+If you already have an older Poetry virtualenv for this project, resync it after pulling changes:
+```
+poetry install --sync
+```
+
 # Setup
-Ensure you have a `config.json` containing the [Blockfrost](https://blockfrost.io/) or [Ogmios](https://github.com/CardanoSolutions/ogmios) and [Kupo](https://github.com/CardanoSolutions/kupo) configuration.
+Ensure you have a `config.yaml` containing the [Blockfrost](https://blockfrost.io/) or [Ogmios](https://github.com/CardanoSolutions/ogmios) and [Kupo](https://github.com/CardanoSolutions/kupo) configuration.
 
 # Commands
 To interact with this demo, use:

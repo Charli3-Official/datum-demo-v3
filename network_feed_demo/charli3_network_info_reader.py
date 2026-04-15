@@ -3,6 +3,12 @@
 from pycardano import Address, MultiAsset, BlockFrostChainContext
 from .datums import GenericData, AggDatum, OracleSettings, OraclePlatform
 from datetime import datetime
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.text import Text
+
+console = Console()
 
 
 class Charli3NetworkInfoReader:
@@ -61,58 +67,86 @@ class Charli3NetworkInfoReader:
                     "No Oracle Feed UTXO found matching the network feed NFT."
                 )
 
-            if oracle_feed_utxo.output.datum and not isinstance(
-                oracle_feed_utxo.output.datum, AggDatum
-            ):
-                if oracle_feed_utxo.output.datum.cbor:
-                    oracle_inline_datum = GenericData.from_cbor(
-                        oracle_feed_utxo.output.datum.cbor
-                    )
+            try:
+                datum = oracle_feed_utxo.output.datum
+                datum_type = type(datum).__name__
+                console.print(f"[dim]Datum type: {datum_type}[/dim]")
 
-                    price = float(oracle_inline_datum.price_data.get_price()) / 1000000
-                    creation_time = self.format_timestamp(
-                        oracle_inline_datum.price_data.get_timestamp()
-                    )
-                    expiration_time = self.format_timestamp(
-                        oracle_inline_datum.price_data.get_expiry()
-                    )
+                if datum and not isinstance(datum, AggDatum):
+                    if hasattr(datum, 'cbor') and datum.cbor:
+                        oracle_inline_datum = GenericData.from_cbor(datum.cbor)
 
-                    feed_info = f"""
-    CHARLI3 - Oracle Feed
-    Last Price: {price}
-    Creation Time: {creation_time}
-    Expiration Time: {expiration_time}"""
-                    print(feed_info)
+                        price = float(oracle_inline_datum.price_data.get_price()) / 1000000
+                        creation_time = self.format_timestamp(
+                            oracle_inline_datum.price_data.get_timestamp()
+                        )
+                        expiration_time = self.format_timestamp(
+                            oracle_inline_datum.price_data.get_expiry()
+                        )
 
-        except Exception as e:
-            print(f"Error retrieving oracle feed: {e}")
+                        table = Table(title="📊 CHARLI3 - Oracle Feed", show_header=False)
+                        table.add_row("Last Price:", Text(f"${price:.6f}", style="bold cyan"))
+                        table.add_row("Creation Time:", Text(creation_time, style="green"))
+                        table.add_row("Expiration Time:", Text(expiration_time, style="yellow"))
+
+                        panel = Panel(table, border_style="blue", padding=(1, 2))
+                        console.print(panel)
+            except Exception as datum_error:
+                console.print(f"[red]Error parsing datum: {type(datum_error).__name__}: {str(datum_error)}[/red]")
+                raise
 
         except ValueError as e:
-            print(f"Error retrieving oracle feed: {e}")
+            console.print(f"[red]Error retrieving oracle feed: {e}[/red]")
+        except Exception as e:
+            console.print(f"[red]Error retrieving oracle feed: {type(e).__name__}: {e}[/red]")
 
-    def get_network_configuration(self):
-        """Fetch the Aggregate UTxO Configuration Using the NFT Identifier"""
+    def get_all_network_configurations(self):
+        """Fetch all Aggregate UTxO Configurations and sort by creation time (ascending)"""
         try:
             oracle_utxos = self.context.utxos(str(self.network_address))
 
+            aggregate_utxos = []
             for utxo in oracle_utxos:
                 if utxo.output.amount.multi_asset >= self.aggregate_state_nft:
-                    aggregate_state_utxo = utxo
-                    break
-            else:
-                raise ValueError("No matching Aggregate State UTXO found.")
+                    try:
+                        aggregate_state_inline_datum: AggDatum = AggDatum.from_cbor(
+                            utxo.output.datum.cbor
+                        )
+                        # Store tuple of (creation_time, settings, utxo_object)
+                        # Using transaction input index as a proxy for creation order
+                        aggregate_utxos.append((
+                            utxo.input.transaction_id,
+                            aggregate_state_inline_datum.aggstate.ag_settings,
+                            utxo
+                        ))
+                    except Exception as e:
+                        console.print(f"[yellow]Warning: Failed to parse aggregate UTXO: {e}[/yellow]")
 
-            aggregate_state_inline_datum: AggDatum = AggDatum.from_cbor(
-                aggregate_state_utxo.output.datum.cbor
-            )
+            if not aggregate_utxos:
+                raise ValueError("No matching Aggregate State UTxOs found.")
 
-            return aggregate_state_inline_datum.aggstate.ag_settings
+            # Sort by transaction ID (as a proxy for creation order)
+            aggregate_utxos.sort(key=lambda x: str(x[0]))
+            return aggregate_utxos
 
         except ValueError as e:
-            # Log the error or re-raise with more context if necessary
+            raise ValueError("Failed to fetch network configurations: " + str(e))
+        except Exception as e:
+            raise Exception(
+                "An unexpected error occurred while fetching network configurations: "
+                + str(e)
+            )
+
+    def get_network_configuration(self):
+        """Fetch the most recent Aggregate UTxO Configuration Using the NFT Identifier"""
+        try:
+            aggregate_utxos = self.get_all_network_configurations()
+            # Return the last (most recent) configuration
+            return aggregate_utxos[-1][1]
+
+        except (ValueError, IndexError) as e:
             raise ValueError("Failed to fetch network configuration: " + str(e))
         except Exception as e:
-            # General exception handling, could be logging or re-raising
             raise Exception(
                 "An unexpected error occurred while fetching network configuration: "
                 + str(e)
@@ -157,37 +191,77 @@ class Charli3NetworkInfoReader:
         """Convert the given timestamp to minutes."""
         return timestamp / 60000
 
+    def display_all_network_configurations(self):
+        """Display all network configurations sorted by creation time"""
+        aggregate_utxos = self.get_all_network_configurations()
+
+        # Create table showing all aggregate UTxOs
+        utxos_table = Table(title="📋 All Aggregate State UTxOs (Sorted by Creation Time)", show_header=True)
+        utxos_table.add_column("Index", style="cyan")
+        utxos_table.add_column("Transaction ID", style="magenta")
+        utxos_table.add_column("Output Index", style="yellow")
+
+        for idx, (tx_id, settings, utxo) in enumerate(aggregate_utxos):
+            utxos_table.add_row(
+                str(idx + 1),
+                str(tx_id)[:16] + "...",
+                str(utxo.input.index)
+            )
+
+        panel = Panel(utxos_table, border_style="cyan", padding=(1, 2))
+        console.print(panel)
+
+        # Display details for each configuration
+        for idx, (tx_id, settings, utxo) in enumerate(aggregate_utxos):
+            console.print(f"\n[bold blue]Configuration #{idx + 1}[/bold blue]")
+            config_table = Table(show_header=False)
+            config_table.add_row("Transaction:", Text(str(tx_id)[:32] + "...", style="cyan"))
+            config_table.add_row("Output Index:", Text(str(utxo.input.index), style="yellow"))
+            config_table.add_row("Authorized Nodes:", Text(str(len(settings.os_node_list)), style="green"))
+            config_table.add_row("Aggregation Threshold:", Text(f"{settings.os_updated_nodes/100:.1f}%", style="magenta"))
+            config_table.add_row("Max Node Update Time:", Text(f"{self.posixtime_to_min(settings.os_updated_node_time):.1f} min", style="yellow"))
+            config_table.add_row("Min Aggregation Time:", Text(f"{self.posixtime_to_min(settings.os_aggregate_time):.1f} min", style="yellow"))
+
+            panel = Panel(config_table, border_style="green", padding=(1, 2))
+            console.print(panel)
+
     def display_network_configuration(self):
-        """Display the network information"""
+        """Display the most recent network configuration"""
         network_oracle_settings = self.get_network_configuration()
 
-        configuration_details = f"""
-    Contract address: {self.network_address}
-    ########## C3 Network configuration ##########
-    1. List of authorized nodes in Network: {len(network_oracle_settings.os_node_list)} nodes.
-    2. The percentage of nodes needed for aggregation: {network_oracle_settings.os_updated_nodes/100}%.
-    3. The max time since last node update for aggregation: {self.posixtime_to_min(network_oracle_settings.os_updated_node_time)} minutes.
-    4. The min time since last aggregation for calculating a new network feed: {self.posixtime_to_min(network_oracle_settings.os_aggregate_time)} minutes.
-    5. The percentage of change between last aggregated value and the new network feed: {network_oracle_settings.os_aggregate_change/100}%.
-    6. Minimum Required Value for Recharging the C3 Pool: {network_oracle_settings.os_minimum_deposit} tokens.
-    7. Valid time window to execute the aggregate transaction: {self.posixtime_to_min(network_oracle_settings.os_aggregate_valid_range)} minutes.
-    """
+        # Create main configuration table
+        config_table = Table(title="⚙️  C3 Network Configuration", show_header=False)
+        config_table.add_row("Contract Address:", Text(str(self.network_address), style="cyan"))
+        config_table.add_row("Authorized Nodes:", Text(str(len(network_oracle_settings.os_node_list)), style="green"))
+        config_table.add_row("Aggregation Threshold:", Text(f"{network_oracle_settings.os_updated_nodes/100:.1f}%", style="magenta"))
+        config_table.add_row("Max Node Update Time:", Text(f"{self.posixtime_to_min(network_oracle_settings.os_updated_node_time):.1f} min", style="yellow"))
+        config_table.add_row("Min Aggregation Time:", Text(f"{self.posixtime_to_min(network_oracle_settings.os_aggregate_time):.1f} min", style="yellow"))
+        config_table.add_row("Price Change Threshold:", Text(f"{network_oracle_settings.os_aggregate_change/100:.1f}%", style="magenta"))
+        config_table.add_row("Min Pool Recharge:", Text(f"{network_oracle_settings.os_minimum_deposit} tokens", style="green"))
+        config_table.add_row("Aggregate Timeout:", Text(f"{self.posixtime_to_min(network_oracle_settings.os_aggregate_valid_range):.1f} min", style="yellow"))
 
+        # Rewards section
         node, aggregate, platform = self.get_price_rewards(network_oracle_settings)
-        rewards_details = f"""8. C3 Network rewards:
-        8.1 Nodes: {node} C3
-        8.2 Nodes: {aggregate} C3
-        8.3 Platform: {platform} C3
-    9. Consensus Setting (IQR): {network_oracle_settings.os_iqr_multiplier}.
-    10. Consensus Setting (DP): {network_oracle_settings.os_divergence/100}%.
-    """
+        config_table.add_row("")
+        config_table.add_row("[bold]Rewards[/bold]", "")
+        config_table.add_row("  Node Reward:", Text(f"{node} C3", style="bold green"))
+        config_table.add_row("  Aggregate Reward:", Text(f"{aggregate} C3", style="bold green"))
+        config_table.add_row("  Platform Reward:", Text(f"{platform} C3", style="bold green"))
 
+        # Consensus settings
+        config_table.add_row("")
+        config_table.add_row("[bold]Consensus Settings[/bold]", "")
+        config_table.add_row("  IQR Multiplier:", Text(str(network_oracle_settings.os_iqr_multiplier), style="cyan"))
+        config_table.add_row("  Divergence Percentage:", Text(f"{network_oracle_settings.os_divergence/100:.1f}%", style="cyan"))
+
+        # Signatories section
         signatories, minimum_signatories = self.get_platform_signatories_info(
             network_oracle_settings
         )
-        signatories_details = f"""11. Oracle platform entity:
-        11.1 Signatories pool: {len(signatories)}
-        11.2 Minimum number of signatories: {minimum_signatories}
-    """
+        config_table.add_row("")
+        config_table.add_row("[bold]Platform Signatories[/bold]", "")
+        config_table.add_row("  Total Signatories:", Text(str(len(signatories)), style="blue"))
+        config_table.add_row("  Minimum Required:", Text(str(minimum_signatories), style="blue"))
 
-        print(configuration_details + rewards_details + signatories_details)
+        panel = Panel(config_table, border_style="green", padding=(1, 2))
+        console.print(panel)

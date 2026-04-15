@@ -1,10 +1,19 @@
 """ Key Framework for Interacting with Charli3 Network Feeds """
 
 import argparse
-import yaml
-import ogmios
+import logging
 import sys
+import warnings
+from urllib.parse import urlparse
 
+# Suppress noisy dependency warnings before importing pycardano/blockfrost.
+warnings.filterwarnings(
+    "ignore",
+    message=".*network.*argument will be deprecated.*",
+)
+logging.getLogger("ogmios").setLevel(logging.ERROR)
+
+import yaml
 from pycardano import BlockFrostChainContext, OgmiosChainContext, Address, Network
 from .charli3_network_info_reader import Charli3NetworkInfoReader
 
@@ -35,7 +44,7 @@ def add_arguments(parser):
 
     parser.add_argument(
         "--action",
-        choices=["feed", "configuration"],
+        choices=["feed", "configuration", "all-configurations"],
         default="feed",
         help="Retrieve the oracle feed for the specified token pair",
     )
@@ -71,7 +80,7 @@ def context(args):
     configyaml = load_config()
 
     network = None
-    if args.environment == "tesnet":
+    if args.environment == "preprod":
         network = Network.TESTNET
     else:
         network = Network.MAINNET
@@ -90,11 +99,30 @@ def context(args):
         validate_config(configyaml, args.service, required_keys)
 
         ogmios_ws_url = configyaml["ogmios"]["ws_url"]
-        kupo_url = configyaml["ogmios"]["kupo_url"]
+        parsed_ws_url = urlparse(ogmios_ws_url)
 
-        _, ws_string = ogmios_ws_url.split("ws://")
-        ws_url, port = ws_string.split(":")
-        return ogmios.OgmiosChainContext(host=ws_url, port=int(port), network=network)
+        if parsed_ws_url.scheme not in {"ws", "wss"} or not parsed_ws_url.hostname:
+            raise ValueError(
+                f"Invalid Ogmios ws_url: {ogmios_ws_url}. "
+                "Expected a ws:// or wss:// URL."
+            )
+
+        port = parsed_ws_url.port
+        if port is None:
+            port = 443 if parsed_ws_url.scheme == "wss" else 80
+
+        try:
+            return OgmiosChainContext(
+                host=parsed_ws_url.hostname,
+                port=port,
+                secure=parsed_ws_url.scheme == "wss",
+                network=network,
+            )
+        except ConnectionRefusedError as exc:
+            raise ConnectionError(
+                f"Could not connect to Ogmios at {ogmios_ws_url}. "
+                "Start the Ogmios/Kupo services or update config.yaml."
+            ) from exc
     else:
         raise ValueError(f"Service {args.service} is not supported.")
 
@@ -119,17 +147,23 @@ def display(args):
 
     reader = Charli3NetworkInfoReader(address, minting_policy, context(args))
 
-    if args.action != "feed":
-        reader.display_network_configuration()
-    else:
+    if args.action == "feed":
         reader.display_oracle_feed()
+    elif args.action == "configuration":
+        reader.display_network_configuration()
+    elif args.action == "all-configurations":
+        reader.display_all_network_configurations()
 
 
 def main():
     """main execution program"""
     parser = create_parser()
     args = parser.parse_args(None if sys.argv[1:] else ["-h"])
-    display(args)
+    try:
+        display(args)
+    except (ConnectionError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
