@@ -7,6 +7,8 @@ https://docs.charli3.io/charli3s-documentation/oracle-feeds-datum-standard
 """
 
 from dataclasses import dataclass
+from typing import Union
+
 from pycardano import PlutusData
 from pycardano.serialization import IndefiniteList
 
@@ -110,3 +112,109 @@ class AggDatum(PlutusData):
 
     CONSTR_ID = 2
     aggstate: AggState
+
+
+# ------------------------------#
+#         Charli3 ODV           #
+# ------------------------------#
+
+
+AssetName = bytes
+PolicyId = bytes
+PosixTimeDiff = int
+ScriptHash = bytes
+
+
+@dataclass
+class NoDatum(PlutusData):
+    """Universal None type for ODV PlutusData."""
+
+    CONSTR_ID = 1
+
+
+@dataclass
+class RewardPrices(PlutusData):
+    """Reward price configuration for ODV settings."""
+
+    CONSTR_ID = 0
+    node_fee: int
+    platform_fee: int
+
+
+@dataclass
+class Asset(PlutusData):
+    """Native token asset."""
+
+    CONSTR_ID = 0
+    policy_id: PolicyId
+    name: AssetName
+
+
+@dataclass
+class SomeAsset(PlutusData):
+    """Optional asset wrapper."""
+
+    CONSTR_ID = 0
+    asset: Asset
+
+
+FeeRateNFT = Union[SomeAsset, NoDatum]
+
+
+@dataclass
+class FeeConfig(PlutusData):
+    """Fee configuration embedded in ODV core settings."""
+
+    CONSTR_ID = 0
+    rate_nft: FeeRateNFT
+    reward_prices: RewardPrices
+
+
+@dataclass
+class SomePosixTime(PlutusData):
+    """Optional POSIX time wrapper."""
+
+    CONSTR_ID = 0
+    value: int
+
+
+@dataclass
+class OracleSettingsDatum(PlutusData):
+    """Mutable ODV core settings datum."""
+
+    CONSTR_ID = 0
+    nodes: IndefiniteList
+    required_node_signatures_count: int
+    fee_info: FeeConfig
+    aggregation_liveness_period: PosixTimeDiff
+    time_uncertainty_aggregation: PosixTimeDiff
+    time_uncertainty_platform: PosixTimeDiff
+    iqr_fence_multiplier: int
+    median_divergency_factor: int
+    utxo_size_safety_buffer: int
+    pause_period_started_at: Union[SomePosixTime, NoDatum]
+
+
+@dataclass
+class OracleSettingsVariant(PlutusData):
+    """ODV oracle settings variant."""
+
+    CONSTR_ID = 1
+    datum: OracleSettingsDatum
+
+
+@dataclass
+class RewardAccounts(PlutusData):
+    """Reward account balances grouped by node PKH with a creation time."""
+
+    CONSTR_ID = 0
+    account_rewards: dict
+    created_at: int
+
+
+@dataclass
+class RewardAccountsDatum(PlutusData):
+    """Top-level ODV reward-account datum."""
+
+    CONSTR_ID = 2
+    reward_accounts: RewardAccounts

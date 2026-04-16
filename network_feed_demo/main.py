@@ -144,8 +144,16 @@ def display(args):
 
     address = Address.from_primitive(c3_networks.get(args.token_pair).get("address"))
     minting_policy = c3_networks.get(args.token_pair)["minting-policy"]
+    category = c3_networks.get(args.token_pair).get(
+        "category", "charli3-network-feed"
+    )
 
-    reader = Charli3NetworkInfoReader(address, minting_policy, context(args))
+    reader = Charli3NetworkInfoReader(
+        address,
+        minting_policy,
+        context(args),
+        category=category,
+    )
 
     if args.action == "feed":
         reader.display_oracle_feed()

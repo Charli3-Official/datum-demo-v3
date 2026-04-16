@@ -16,3 +16,7 @@ NIGHT-ADA:
 BTC-ADA:
   address: addr1wyujem6fwxju9arc45lm98z0uwgwm0t8aerjp5mgahpgx7snfcpuu
   minting-policy: 2e3ed96d283a549580e29dd6ec23e5f4a8020a8c1d7f2b95c4b2b4dd
+USDM-RESERVES:
+  address: addr1w88fmwyufz9vdqkukzhaerjxcfm488wsnyrft9cpjtd4utsnw5ym7
+  minting-policy: e7d54c2f5c81206e307e528855bb51e5ffe9295e3db348c4be74deec
+  category: charli3-odv
